@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react";
-import { DollarSign, TrendingUp } from "lucide-react";
+import { DollarSign, Receipt, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 import { GOLD } from "../../theme";
 import { SHeader, StatCard } from "../../components/shared";
 import { ApiError, api } from "../../lib/api";
-import type { RevenuePoint } from "../../lib/types";
+import type { Invoice, RevenuePoint } from "../../lib/types";
 
 export function FinanceView() {
   const [revenue, setRevenue] = useState<RevenuePoint[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.dashboard
-      .revenue()
-      .then(setRevenue)
+    Promise.all([api.dashboard.revenue(), api.finance.invoices()])
+      .then(([r, inv]) => {
+        setRevenue(r);
+        setInvoices(inv);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Não foi possível carregar os dados financeiros."))
       .finally(() => setLoading(false));
   }, []);
@@ -54,6 +57,32 @@ export function FinanceView() {
             <span className="text-emerald-600">R$ {d.receita.toLocaleString("pt-BR")}</span>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Receipt size={13} className="text-muted-foreground" />
+          <p className="text-sm font-medium">Faturas — Sistema Financeiro (externo)</p>
+        </div>
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          {invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-4">Nenhuma fatura registrada ainda no sistema financeiro externo.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 px-4 py-2.5 bg-muted border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <span>Reserva</span><span>Hóspede</span><span>Tipo</span><span>Valor</span>
+              </div>
+              {invoices.map((inv) => (
+                <div key={inv.id} className="grid grid-cols-4 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 text-sm items-center">
+                  <span className="font-medium">{inv.reservation_code}</span>
+                  <span className="text-muted-foreground truncate">{inv.guest_name}</span>
+                  <span className={inv.kind === "cancelamento" ? "text-red-500" : "text-emerald-600"}>{inv.kind}</span>
+                  <span>R$ {inv.amount.toLocaleString("pt-BR")}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

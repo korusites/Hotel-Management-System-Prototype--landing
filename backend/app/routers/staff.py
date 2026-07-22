@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -13,8 +13,12 @@ admin_only = require_role("administrador")
 
 
 @router.get("", response_model=list[StaffRead])
-async def list_staff(db: AsyncSession = Depends(get_db), _staff=Depends(can_view)) -> list[StaffRead]:
-    return await staff_crud.list_staff(db)
+async def list_staff(
+    limit: int = Query(200, le=500),
+    db: AsyncSession = Depends(get_db),
+    _staff=Depends(can_view),
+) -> list[StaffRead]:
+    return await staff_crud.list_staff(db, limit)
 
 
 @router.get("/{staff_id}", response_model=StaffRead)

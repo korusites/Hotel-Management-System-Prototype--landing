@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.security import create_access_token, verify_password
 from app.crud import staff as staff_crud
 from app.models.staff import StaffStatus
@@ -11,7 +12,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/minute")
+async def login(
+    request: Request, payload: LoginRequest, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
     staff = await staff_crud.get_staff_by_email(db, payload.email)
     if (
         staff is None

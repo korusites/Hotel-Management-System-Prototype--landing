@@ -32,6 +32,9 @@ class Reservation(Base):
 
     guest: Mapped["Guest"] = relationship(back_populates="reservations")
     room: Mapped["Room"] = relationship(back_populates="reservations")
+    consumed_services: Mapped[list["ReservationService"]] = relationship(
+        back_populates="reservation", cascade="all, delete-orphan"
+    )
 
     @property
     def nights(self) -> int:

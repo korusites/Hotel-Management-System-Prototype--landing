@@ -14,9 +14,14 @@ WITH_RELATIONS = (selectinload(Reservation.guest), selectinload(Reservation.room
 
 
 async def list_reservations(
-    db: AsyncSession, status: ReservationStatus | None = None
+    db: AsyncSession, status: ReservationStatus | None = None, limit: int = 200
 ) -> list[Reservation]:
-    query = select(Reservation).options(*WITH_RELATIONS).order_by(Reservation.checkin.desc())
+    query = (
+        select(Reservation)
+        .options(*WITH_RELATIONS)
+        .order_by(Reservation.checkin.desc())
+        .limit(limit)
+    )
     if status is not None:
         query = query.where(Reservation.status == status)
     result = await db.execute(query)

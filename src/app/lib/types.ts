@@ -124,3 +124,31 @@ export interface OccupancyPoint {
   day: string;
   occupancy_rate: number;
 }
+
+export interface Invoice {
+  id: number;
+  reservation_code: string;
+  guest_name: string;
+  amount: number;
+  kind: "reserva" | "cancelamento";
+  status: string;
+  created_at: string;
+}
+
+export interface Consumption {
+  id: number;
+  service_id: number;
+  service_name: string;
+  unit_price: number;
+  quantity: number;
+  total: number;
+  created_at: string;
+}
+
+export interface BackupFile {
+  filename: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export type ReportType = "rooms" | "guests" | "reservations" | "financial" | "services" | "staff";

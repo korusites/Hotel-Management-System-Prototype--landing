@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-only-secret-change-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 480
+    finance_service_url: str = "http://finance:8001"
 
 
 settings = Settings()

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, Edit2, Eye, X } from "lucide-react";
+import { ChevronRight, Eye, X } from "lucide-react";
 
 import { NAVY, serif } from "../../theme";
 import { ResBadge, SHeader } from "../../components/shared";
 import { ApiError, api } from "../../lib/api";
 import type { Reservation, ReservationStatus } from "../../lib/types";
+import { ReservationServicesModal } from "../modals/ReservationServicesModal";
 import { useStaffAuth } from "../AuthContext";
 
 export function ReservationsView() {
@@ -15,6 +16,7 @@ export function ReservationsView() {
   const [tab, setTab] = useState<ReservationStatus | "todas">("todas");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Reservation | null>(null);
 
   function refetch() {
     setLoading(true);
@@ -67,8 +69,7 @@ export function ReservationsView() {
                 <div className="flex items-center gap-3">
                   <div className="text-right"><p className="text-base font-bold text-foreground" style={{ fontFamily: serif }}>R$ {r.total.toLocaleString("pt-BR")}</p></div>
                   <div className="flex gap-1">
-                    <button className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors"><Eye size={13} /></button>
-                    <button className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors"><Edit2 size={13} /></button>
+                    <button onClick={() => setViewing(r)} className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors" title="Serviços consumidos"><Eye size={13} /></button>
                     {canManage && r.status !== "cancelada" && r.status !== "checkout" && (
                       <button onClick={() => handleCancel(r)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-red-500 transition-colors"><X size={13} /></button>
                     )}
@@ -79,6 +80,7 @@ export function ReservationsView() {
           ))}
         </div>
       )}
+      {viewing && <ReservationServicesModal reservation={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }

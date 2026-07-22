@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -30,10 +30,11 @@ async def _with_stats(db: AsyncSession, guest: Guest) -> GuestReadWithStats:
 @router.get("", response_model=list[GuestReadWithStats])
 async def list_guests(
     q: str | None = None,
+    limit: int = Query(200, le=500),
     db: AsyncSession = Depends(get_db),
     _staff=Depends(get_current_staff),
 ) -> list[GuestReadWithStats]:
-    guests = await guest_crud.list_guests(db, q)
+    guests = await guest_crud.list_guests(db, q, limit)
     return [await _with_stats(db, guest) for guest in guests]
 
 

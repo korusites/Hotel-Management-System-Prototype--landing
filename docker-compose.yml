@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: hotel
       POSTGRES_PASSWORD: hotel
@@ -17,14 +18,53 @@ services:
 
   api:
     build: ./backend
+    restart: unless-stopped
     env_file: ./backend/.env
+    environment:
+      FINANCE_SERVICE_URL: http://finance:8001
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      finance:
+        condition: service_started
     volumes:
       - ./backend:/app
+      - ./backups:/app/backups:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  finance:
+    build: ./finance-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - finance_data:/data
+
+  backup:
+    image: prodrigestivill/postgres-backup-local
+    restart: unless-stopped
+    volumes:
+      - ./backups:/backups
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: hotel
+      POSTGRES_USER: hotel
+      POSTGRES_PASSWORD: hotel
+      SCHEDULE: "@hourly"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   hotel_pgdata:
+  finance_data:

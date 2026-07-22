@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.crud import guest as guest_crud
 from app.crud import reservation as reservation_crud
+from app.integrations import finance_client
 from app.models.reservation import ReservationStatus
 from app.schemas.guest import GuestCreate
 from app.schemas.reservation import PublicBookingCreate, ReservationCreate, ReservationRead
@@ -51,9 +52,13 @@ async def create_booking(
         guests=payload.guests,
     )
     try:
-        return await reservation_crud.create_reservation(db, reservation_data)
+        reservation = await reservation_crud.create_reservation(db, reservation_data)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    await finance_client.register_invoice(
+        reservation.code, reservation.guest_name, float(reservation.total), "reserva"
+    )
+    return reservation
 
 
 @router.post("/reservations/{reservation_id}/cancel", response_model=ReservationRead)
@@ -67,4 +72,8 @@ async def cancel_my_reservation(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Reserva já está cancelada")
     if reservation.status == ReservationStatus.checkout:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Reserva já concluída")
-    return await reservation_crud.cancel_reservation(db, reservation)
+    canceled = await reservation_crud.cancel_reservation(db, reservation)
+    await finance_client.register_invoice(
+        canceled.code, canceled.guest_name, float(canceled.total), "cancelamento"
+    )
+    return canceled

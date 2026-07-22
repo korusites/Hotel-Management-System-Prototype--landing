@@ -11,6 +11,7 @@ from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models.guest import Guest
 from app.models.reservation import Reservation, ReservationStatus
+from app.models.reservation_service import ReservationService
 from app.models.room import Room, RoomStatus, RoomType
 from app.models.service import Service
 from app.models.staff import StaffMember, StaffRole, StaffStatus
@@ -107,20 +108,23 @@ STAFF = [
 ]
 
 SERVICES = [
-    dict(name="Café da Manhã Premium", category="Alimentação", price=65, unit="por pessoa",
-         available=True, used=142),
-    dict(name="Spa & Massagem 60min", category="Bem-estar", price=220, unit="por sessão",
-         available=True, used=38),
-    dict(name="Transfer Aeroporto", category="Transporte", price=150, unit="por trajeto",
-         available=True, used=55),
-    dict(name="Lavanderia Express", category="Serviços", price=45, unit="por peça",
-         available=True, used=89),
-    dict(name="Baby Sitter", category="Bem-estar", price=80, unit="por hora",
-         available=False, used=12),
-    dict(name="Estacionamento Valet", category="Transporte", price=55, unit="por diária",
-         available=True, used=201),
-    dict(name="Late Checkout (até 16h)", category="Serviços", price=120, unit="por uso",
-         available=True, used=67),
+    dict(name="Café da Manhã Premium", category="Alimentação", price=65, unit="por pessoa", available=True),
+    dict(name="Spa & Massagem 60min", category="Bem-estar", price=220, unit="por sessão", available=True),
+    dict(name="Transfer Aeroporto", category="Transporte", price=150, unit="por trajeto", available=True),
+    dict(name="Lavanderia Express", category="Serviços", price=45, unit="por peça", available=True),
+    dict(name="Baby Sitter", category="Bem-estar", price=80, unit="por hora", available=False),
+    dict(name="Estacionamento Valet", category="Transporte", price=55, unit="por diária", available=True),
+    dict(name="Late Checkout (até 16h)", category="Serviços", price=120, unit="por uso", available=True),
+]
+
+# Consumo de serviços já lançado em reservas existentes (alimenta o contador "used" real).
+CONSUMPTIONS = [
+    dict(reservation="RES-0241", service="Spa & Massagem 60min", quantity=2),
+    dict(reservation="RES-0241", service="Café da Manhã Premium", quantity=5),
+    dict(reservation="RES-0242", service="Transfer Aeroporto", quantity=1),
+    dict(reservation="RES-0244", service="Estacionamento Valet", quantity=6),
+    dict(reservation="RES-0245", service="Late Checkout (até 16h)", quantity=1),
+    dict(reservation="RES-0247", service="Lavanderia Express", quantity=3),
 ]
 
 
@@ -141,22 +145,40 @@ async def main() -> None:
         for data in STAFF:
             db.add(StaffMember(**data, hashed_password=hash_password(DEMO_PASSWORD)))
 
+        services_by_name = {}
         for data in SERVICES:
-            db.add(Service(**data))
+            service = Service(**data)
+            db.add(service)
+            services_by_name[data["name"]] = service
 
         await db.flush()
 
+        reservations_by_code = {}
         for data in RESERVATIONS:
+            reservation = Reservation(
+                code=data["code"],
+                guest_id=guests_by_name[data["guest"]].id,
+                room_id=rooms_by_number[data["room"]].id,
+                checkin=data["checkin"],
+                checkout=data["checkout"],
+                guests=data["guests"],
+                status=data["status"],
+                total=data["total"],
+            )
+            db.add(reservation)
+            reservations_by_code[data["code"]] = reservation
+
+        await db.flush()
+
+        for data in CONSUMPTIONS:
+            service = services_by_name[data["service"]]
             db.add(
-                Reservation(
-                    code=data["code"],
-                    guest_id=guests_by_name[data["guest"]].id,
-                    room_id=rooms_by_number[data["room"]].id,
-                    checkin=data["checkin"],
-                    checkout=data["checkout"],
-                    guests=data["guests"],
-                    status=data["status"],
-                    total=data["total"],
+                ReservationService(
+                    reservation_id=reservations_by_code[data["reservation"]].id,
+                    service_id=service.id,
+                    quantity=data["quantity"],
+                    unit_price=service.price,
+                    created_at=reservations_by_code[data["reservation"]].checkin,
                 )
             )
 

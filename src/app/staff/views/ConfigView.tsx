@@ -1,10 +1,31 @@
-import { Building2, Download, RefreshCw, Shield, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, RefreshCw, Shield, Users } from "lucide-react";
 
 import { GOLD } from "../../theme";
 import { SHeader } from "../../components/shared";
+import { ApiError, api } from "../../lib/api";
+import type { BackupFile } from "../../lib/types";
 
-// Sem entidade de configurações/perfis no backend ainda — tela permanece ilustrativa.
+function formatBackupDate(iso: string): string {
+  return new Date(iso).toLocaleString("pt-BR");
+}
+
+// Segurança / Dados do Hotel / Perfis de Acesso ainda não têm entidade própria no backend — permanecem ilustrativos.
 export function ConfigView() {
+  const [backups, setBackups] = useState<BackupFile[]>([]);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [loadingBackups, setLoadingBackups] = useState(true);
+
+  useEffect(() => {
+    api.system
+      .backups()
+      .then(setBackups)
+      .catch((err) => setBackupError(err instanceof ApiError ? err.message : "Não foi possível consultar o sistema de backup."))
+      .finally(() => setLoadingBackups(false));
+  }, []);
+
+  const latest = backups[0];
+
   return (
     <div>
       <SHeader title="Configurações" />
@@ -46,8 +67,20 @@ export function ConfigView() {
         </div>
         <div className="bg-card rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4"><RefreshCw size={15} style={{ color: GOLD }} /><h3 className="font-medium text-sm">Backup & Recuperação</h3></div>
-          <div className="p-3 bg-muted rounded-lg mb-3"><p className="text-xs font-medium text-foreground">Último backup</p><p className="text-sm font-semibold mt-0.5">22/07/2026 às 03:00</p><p className="text-xs text-muted-foreground">Automático diário ativo</p></div>
-          <button className="w-full py-2 border border-border rounded-lg text-sm text-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2"><Download size={13} />Exportar Backup</button>
+          {loadingBackups ? (
+            <p className="text-xs text-muted-foreground">Consultando sistema de backup...</p>
+          ) : backupError ? (
+            <p className="text-xs text-red-500">{backupError}</p>
+          ) : latest ? (
+            <div className="p-3 bg-muted rounded-lg mb-1">
+              <p className="text-xs font-medium text-foreground">Último backup</p>
+              <p className="text-sm font-semibold mt-0.5">{formatBackupDate(latest.created_at)}</p>
+              <p className="text-xs text-muted-foreground">{latest.filename} · {(latest.size_bytes / 1024).toFixed(0)} KB</p>
+              <p className="text-xs text-muted-foreground mt-1">{backups.length} backup{backups.length > 1 ? "s" : ""} disponíve{backups.length > 1 ? "is" : "l"} · automático a cada hora</p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Nenhum backup gerado ainda — o serviço externo roda automaticamente a cada hora.</p>
+          )}
         </div>
         <div className="bg-card rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4"><Users size={15} style={{ color: GOLD }} /><h3 className="font-medium text-sm">Perfis de Acesso</h3></div>
@@ -66,7 +99,7 @@ export function ConfigView() {
           </div>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mt-4">Esta tela ainda não é persistida no backend — valores são ilustrativos.</p>
+      <p className="text-xs text-muted-foreground mt-4">Segurança, dados do hotel e perfis de acesso ainda são ilustrativos — só o Backup & Recuperação está ligado a um sistema real.</p>
     </div>
   );
 }

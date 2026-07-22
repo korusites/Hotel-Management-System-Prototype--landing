@@ -1,6 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.reservation_service import ReservationService
 from app.models.service import Service
 from app.schemas.service import ServiceCreate, ServiceUpdate
 
@@ -8,6 +9,14 @@ from app.schemas.service import ServiceCreate, ServiceUpdate
 async def list_services(db: AsyncSession) -> list[Service]:
     result = await db.execute(select(Service).order_by(Service.category, Service.name))
     return list(result.scalars().all())
+
+
+async def usage_counts(db: AsyncSession) -> dict[int, int]:
+    query = select(ReservationService.service_id, func.sum(ReservationService.quantity)).group_by(
+        ReservationService.service_id
+    )
+    result = await db.execute(query)
+    return {service_id: int(total) for service_id, total in result.all()}
 
 
 async def get_service(db: AsyncSession, service_id: int) -> Service | None:

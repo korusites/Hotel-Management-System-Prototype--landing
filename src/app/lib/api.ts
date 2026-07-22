@@ -1,9 +1,13 @@
 import { loadSession } from "./auth";
 import type {
+  BackupFile,
+  Consumption,
   DashboardStats,
   Guest,
   GuestInput,
+  Invoice,
   OccupancyPoint,
+  ReportType,
   Reservation,
   ReservationStatus,
   RevenuePoint,
@@ -84,6 +88,30 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
   return `?${search.toString()}`;
 }
 
+async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() });
+  if (res.status === 401) unauthorizedHandler?.();
+  if (!res.ok) throw new ApiError(await extractDetail(res), res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+const REPORT_PATHS: Record<ReportType, { path: string; filename: string }> = {
+  rooms: { path: "/reports/rooms", filename: "relatorio-quartos.csv" },
+  guests: { path: "/reports/guests", filename: "relatorio-hospedes.csv" },
+  reservations: { path: "/reports/reservations", filename: "relatorio-reservas.csv" },
+  financial: { path: "/reports/financial", filename: "relatorio-financeiro.csv" },
+  services: { path: "/reports/services", filename: "relatorio-servicos.csv" },
+  staff: { path: "/reports/staff", filename: "relatorio-equipe.csv" },
+};
+
 export interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -122,6 +150,17 @@ export const api = {
       request<Reservation[]>(`/reservations${qs({ status_filter: status })}`),
     update: (id: number, data: { status?: ReservationStatus; checkin?: string; checkout?: string; guests?: number }) =>
       request<Reservation>(`/reservations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    services: {
+      list: (reservationId: number) =>
+        request<Consumption[]>(`/reservations/${reservationId}/services`),
+      add: (reservationId: number, data: { service_id: number; quantity: number }) =>
+        request<Consumption>(`/reservations/${reservationId}/services`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      remove: (reservationId: number, consumptionId: number) =>
+        request<void>(`/reservations/${reservationId}/services/${consumptionId}`, { method: "DELETE" }),
+    },
   },
 
   staff: {
@@ -144,6 +183,21 @@ export const api = {
     stats: () => request<DashboardStats>("/dashboard/stats"),
     revenue: () => request<RevenuePoint[]>("/dashboard/revenue"),
     occupancy: () => request<OccupancyPoint[]>("/dashboard/occupancy"),
+  },
+
+  finance: {
+    invoices: () => request<Invoice[]>("/finance/invoices"),
+  },
+
+  system: {
+    backups: () => request<BackupFile[]>("/system/backups"),
+  },
+
+  reports: {
+    download: (type: ReportType) => {
+      const { path, filename } = REPORT_PATHS[type];
+      return downloadFile(path, filename);
+    },
   },
 
   guestPortal: {

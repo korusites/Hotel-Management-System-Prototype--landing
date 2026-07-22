@@ -8,8 +8,8 @@ from app.models.reservation import Reservation, ReservationStatus
 from app.schemas.guest import GuestCreate, GuestUpdate
 
 
-async def list_guests(db: AsyncSession, q: str | None = None) -> list[Guest]:
-    query = select(Guest).order_by(Guest.name)
+async def list_guests(db: AsyncSession, q: str | None = None, limit: int = 200) -> list[Guest]:
+    query = select(Guest).order_by(Guest.name).limit(limit)
     if q:
         pattern = f"%{q.lower()}%"
         query = query.where(

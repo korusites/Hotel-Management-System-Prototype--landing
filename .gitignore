@@ -9,3 +9,6 @@ backend/**/__pycache__/
 backend/.venv/
 backend/*.egg-info/
 backend/.env
+
+# Backups gerados pelo serviço de backup (RNF09) — não versionar dumps
+/backups/

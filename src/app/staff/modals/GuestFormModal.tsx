@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { GoldBtn, OutlineBtn, inputClass, labelClass } from "../../components/shared";
@@ -24,6 +25,7 @@ export function GuestFormModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCpf, setShowCpf] = useState(false);
 
   async function submit() {
     setSaving(true);
@@ -61,7 +63,22 @@ export function GuestFormModal({
           </div>
           <div>
             <label className={labelClass}>CPF *</label>
-            <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} className={inputClass} />
+            <div className="relative">
+              <input
+                type={showCpf ? "text" : "password"}
+                value={form.cpf}
+                onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+                className={`${inputClass} pr-9`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCpf((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showCpf ? "Ocultar CPF" : "Mostrar CPF"}
+              >
+                {showCpf ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
           <div>
             <label className={labelClass}>Cidade</label>

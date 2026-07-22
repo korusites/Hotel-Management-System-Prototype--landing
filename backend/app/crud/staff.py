@@ -6,8 +6,8 @@ from app.models.staff import StaffMember
 from app.schemas.staff import StaffCreate, StaffUpdate
 
 
-async def list_staff(db: AsyncSession) -> list[StaffMember]:
-    result = await db.execute(select(StaffMember).order_by(StaffMember.name))
+async def list_staff(db: AsyncSession, limit: int = 200) -> list[StaffMember]:
+    result = await db.execute(select(StaffMember).order_by(StaffMember.name).limit(limit))
     return list(result.scalars().all())
 
 
