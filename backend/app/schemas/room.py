@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict
 
 from app.models.room import RoomStatus, RoomType
@@ -33,3 +35,8 @@ class RoomRead(RoomBase):
 
     id: int
     status: RoomStatus
+
+
+class RoomCatalogEntry(RoomRead):
+    available: bool
+    available_from: date | None = None

@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,16 @@ async def list_services(db: AsyncSession) -> list[Service]:
 async def usage_counts(db: AsyncSession) -> dict[int, int]:
     query = select(ReservationService.service_id, func.sum(ReservationService.quantity)).group_by(
         ReservationService.service_id
+    )
+    result = await db.execute(query)
+    return {service_id: int(total) for service_id, total in result.all()}
+
+
+async def usage_counts_between(db: AsyncSession, start: date, end: date) -> dict[int, int]:
+    query = (
+        select(ReservationService.service_id, func.sum(ReservationService.quantity))
+        .where(ReservationService.created_at >= start, ReservationService.created_at <= end)
+        .group_by(ReservationService.service_id)
     )
     result = await db.execute(query)
     return {service_id: int(total) for service_id, total in result.all()}

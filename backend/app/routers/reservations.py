@@ -99,7 +99,7 @@ async def add_reservation_service(
     if reservation is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Reserva não encontrada")
     try:
-        return await reservation_service_crud.add_consumption(db, reservation_id, payload)
+        return await reservation_service_crud.add_consumption(db, reservation, payload)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 

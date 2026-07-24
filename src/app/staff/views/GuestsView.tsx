@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Edit2, Search, Star, Trash2 } from "lucide-react";
+import { Edit2, History, Search, Star, Trash2 } from "lucide-react";
 
 import { GOLD } from "../../theme";
 import { AddBtn, SHeader } from "../../components/shared";
 import { ApiError, api } from "../../lib/api";
 import type { Guest } from "../../lib/types";
 import { GuestFormModal } from "../modals/GuestFormModal";
+import { GuestHistoryModal } from "../modals/GuestHistoryModal";
 import { useStaffAuth } from "../AuthContext";
 
 export function GuestsView() {
@@ -18,6 +19,7 @@ export function GuestsView() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Guest | null>(null);
+  const [viewingHistory, setViewingHistory] = useState<Guest | null>(null);
 
   function refetch() {
     setLoading(true);
@@ -63,6 +65,7 @@ export function GuestsView() {
               <div><p className="text-sm font-medium text-foreground">{g.stays}x</p><div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={9} fill={i < g.rating ? GOLD : "none"} stroke={i < g.rating ? GOLD : "#ccc"} />)}</div></div>
               <span className="text-xs text-muted-foreground">{g.last_stay ?? "—"}</span>
               <div className="flex gap-1">
+                <button onClick={() => setViewingHistory(g)} title="Histórico de reservas" className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors"><History size={12} /></button>
                 <button onClick={() => { setEditing(g); setModalOpen(true); }} className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors"><Edit2 size={12} /></button>
                 {canDelete && (
                   <button onClick={() => handleDelete(g)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
@@ -79,6 +82,7 @@ export function GuestsView() {
           onSaved={() => { setModalOpen(false); refetch(); }}
         />
       )}
+      {viewingHistory && <GuestHistoryModal guest={viewingHistory} onClose={() => setViewingHistory(null)} />}
     </div>
   );
 }

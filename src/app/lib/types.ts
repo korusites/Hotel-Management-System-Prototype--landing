@@ -24,6 +24,11 @@ export interface RoomInput {
   img?: string | null;
 }
 
+export interface RoomCatalogEntry extends Room {
+  available: boolean;
+  available_from: string | null;
+}
+
 export interface Guest {
   id: number;
   name: string;
@@ -70,6 +75,7 @@ export interface Staff {
   id: number;
   name: string;
   email: string;
+  cpf: string;
   phone: string | null;
   role: StaffRole;
   department: string | null;
@@ -80,6 +86,7 @@ export interface Staff {
 export interface StaffInput {
   name: string;
   email: string;
+  cpf: string;
   phone?: string | null;
   role: StaffRole;
   department?: string | null;
@@ -152,3 +159,15 @@ export interface BackupFile {
 }
 
 export type ReportType = "rooms" | "guests" | "reservations" | "financial" | "services" | "staff";
+export const PERIOD_REPORTS: ReportType[] = ["reservations", "financial", "services"];
+
+export type PaymentMethod = "dinheiro" | "cartao_credito" | "cartao_debito" | "pix" | "transferencia";
+
+export interface Payment {
+  id: number;
+  reservation_code: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  status: string;
+  created_at: string;
+}

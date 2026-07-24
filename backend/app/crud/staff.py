@@ -22,6 +22,11 @@ async def get_staff_by_email(db: AsyncSession, email: str) -> StaffMember | None
     return result.scalar_one_or_none()
 
 
+async def get_staff_by_cpf(db: AsyncSession, cpf: str) -> StaffMember | None:
+    result = await db.execute(select(StaffMember).where(StaffMember.cpf == cpf))
+    return result.scalar_one_or_none()
+
+
 async def create_staff(db: AsyncSession, data: StaffCreate) -> StaffMember:
     payload = data.model_dump(exclude={"password"})
     staff = StaffMember(**payload, hashed_password=hash_password(data.password))

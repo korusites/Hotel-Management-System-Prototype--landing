@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.reservation import Reservation, ReservationStatus
@@ -20,6 +20,11 @@ async def list_rooms(db: AsyncSession, status: RoomStatus | None = None) -> list
 
 async def get_room(db: AsyncSession, room_id: int) -> Room | None:
     return await db.get(Room, room_id)
+
+
+async def get_room_by_number(db: AsyncSession, number: str) -> Room | None:
+    result = await db.execute(select(Room).where(Room.number == number))
+    return result.scalar_one_or_none()
 
 
 async def create_room(db: AsyncSession, data: RoomCreate) -> Room:
@@ -68,3 +73,34 @@ async def search_availability(
     query = query.order_by(Room.price)
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def catalog(
+    db: AsyncSession,
+    checkin: date,
+    checkout: date,
+    pax: int,
+    room_type: RoomType | None = None,
+) -> list[tuple[Room, bool, date | None]]:
+    query = select(Room).where(Room.capacity >= pax)
+    if room_type is not None:
+        query = query.where(Room.type == room_type)
+    query = query.order_by(Room.price)
+    rooms = (await db.execute(query)).scalars().all()
+
+    entries = []
+    for room in rooms:
+        if room.status == RoomStatus.manutencao:
+            entries.append((room, False, None))
+            continue
+        overlap_result = await db.execute(
+            select(func.max(Reservation.checkout)).where(
+                Reservation.room_id == room.id,
+                Reservation.status.in_(ACTIVE_STATUSES),
+                Reservation.checkin < checkout,
+                Reservation.checkout > checkin,
+            )
+        )
+        available_from = overlap_result.scalar_one_or_none()
+        entries.append((room, available_from is None, available_from))
+    return entries

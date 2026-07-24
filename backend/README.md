@@ -67,8 +67,20 @@ Serviço separado, com banco próprio (SQLite), simulando um sistema financeiro 
 
 `GET/POST /guest-portal/*` não exigem autenticação — decisão confirmada de produto: o e-mail informado na reserva já serve como identificação do hóspede, sem conta/senha. Cancelar uma reserva (`POST /guest-portal/reservations/{id}/cancel`) exige que o `guest_email` informado corresponda ao e-mail do hóspede da reserva; isso não é autenticação forte (sem verificação de posse do e-mail) — suficiente para este protótipo, mas precisaria de um mecanismo mais robusto antes de usar com dados reais de hóspedes.
 
+## Testes de caixa cinza (`tests/`)
+
+Rodam contra a stack real (containers já no ar), batendo na API principal, no sistema financeiro externo e no Postgres — sem importar nem mockar nada de `app/`. Cada teste usa algum conhecimento da arquitetura interna (que existem dois serviços, que o rate limit é 5/minuto, que a transição de status só ocorre na leitura) para escolher o caso certo, mas a verificação em si é sempre pela borda do sistema:
+
+```bash
+docker compose up -d --build
+docker compose exec api alembic upgrade head
+pip install -r backend/requirements-dev.txt
+pytest backend/tests -v
+```
+
+`CG-02` para e reinicia o container `finance` durante o teste (para provar que a reserva não é bloqueada com o sistema financeiro fora do ar) — por isso os testes rodam na máquina host, não dentro de um container.
+
 ## Fora de escopo
 
-- Testes automatizados.
 - Encriptação em repouso do CPF no banco (hoje é texto puro na coluna, protegido só por controle de acesso e mascaramento na UI).
 - Telas de Configurações (segurança, dados do hotel, perfis de acesso) e Relatórios de escala de equipe permanecem ilustrativas — não há entidade de "configurações" no backend.

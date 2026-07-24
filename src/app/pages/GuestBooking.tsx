@@ -6,9 +6,14 @@ import {
 import { CREAM, GOLD, NAVY, mono, sans, serif } from "../theme";
 import { GoldBtn, OutlineBtn, inputClass, labelClass } from "../components/shared";
 import { ApiError, api } from "../lib/api";
-import type { Reservation, Room, RoomType } from "../lib/types";
+import type { Reservation, Room, RoomCatalogEntry, RoomType } from "../lib/types";
 
 type Step = "search" | "select" | "form" | "done";
+
+function formatDateBR(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
 
 export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const [step, setStep] = useState<Step>("search");
@@ -19,7 +24,7 @@ export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: (
   const [picked, setPicked] = useState<Room | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", cpf: "", notes: "" });
 
-  const [available, setAvailable] = useState<Room[]>([]);
+  const [available, setAvailable] = useState<RoomCatalogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
@@ -32,9 +37,9 @@ export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: (
     setLoading(true);
     setError(null);
     api.rooms
-      .availability(checkin, checkout, pax, typeF === "Todos" ? undefined : typeF)
+      .catalog(checkin, checkout, pax, typeF === "Todos" ? undefined : typeF)
       .then(setAvailable)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Não foi possível buscar quartos disponíveis."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Não foi possível buscar os quartos."))
       .finally(() => setLoading(false));
   }, [step, checkin, checkout, pax, typeF]);
 
@@ -182,7 +187,7 @@ export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: (
           <div>
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <div>
-                <h2 className="text-2xl font-bold" style={{ fontFamily: serif, color: NAVY }}>Quartos Disponíveis</h2>
+                <h2 className="text-2xl font-bold" style={{ fontFamily: serif, color: NAVY }}>Quartos</h2>
                 <p className="text-sm text-muted-foreground mt-0.5">{checkin} → {checkout} · {pax} hóspede{pax > 1 ? "s" : ""} · {nights} noite{nights > 1 ? "s" : ""}</p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -201,16 +206,21 @@ export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: (
             ) : available.length === 0 ? (
               <div className="text-center py-16">
                 <BedDouble size={40} className="mx-auto mb-4 text-muted-foreground opacity-30" />
-                <p className="text-lg font-medium text-muted-foreground">Nenhum quarto disponível para os critérios.</p>
+                <p className="text-lg font-medium text-muted-foreground">Nenhum quarto encontrado para os critérios.</p>
                 <button onClick={() => setStep("search")} className="mt-3 text-sm underline" style={{ color: GOLD }}>Alterar busca</button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {available.map((room) => (
-                  <div key={room.id} onClick={() => { setPicked(room); setStep("form"); }}
-                    className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all group cursor-pointer">
+                  <div key={room.id} onClick={() => { if (room.available) { setPicked(room); setStep("form"); } }}
+                    className={`bg-card rounded-xl border border-border overflow-hidden transition-all group ${room.available ? "hover:shadow-lg cursor-pointer" : "opacity-60"}`}>
                     <div className="relative h-44 bg-neutral-200 overflow-hidden">
-                      <img src={room.img ?? ""} alt={`Quarto ${room.type}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={room.img ?? ""} alt={`Quarto ${room.type}`} className={`w-full h-full object-cover transition-transform duration-500 ${room.available ? "group-hover:scale-105" : "grayscale"}`} />
+                      {!room.available && (
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded text-xs font-semibold text-white" style={{ backgroundColor: "#B83232" }}>
+                          Indisponível
+                        </div>
+                      )}
                     </div>
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-2">
@@ -227,8 +237,16 @@ export function GuestBooking({ onBack, onDone }: { onBack: () => void; onDone: (
                         {room.amenities.slice(0, 4).map((a) => <span key={a} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">{a}</span>)}
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <span className="text-sm text-muted-foreground">Total: <strong className="text-foreground">R$ {(room.price * nights).toLocaleString("pt-BR")}</strong></span>
-                        <GoldBtn sm>Selecionar</GoldBtn>
+                        {room.available ? (
+                          <>
+                            <span className="text-sm text-muted-foreground">Total: <strong className="text-foreground">R$ {(room.price * nights).toLocaleString("pt-BR")}</strong></span>
+                            <GoldBtn sm>Selecionar</GoldBtn>
+                          </>
+                        ) : (
+                          <span className="text-sm font-medium" style={{ color: "#B83232" }}>
+                            {room.available_from ? `Disponível a partir de ${formatDateBR(room.available_from)}` : "Em manutenção"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

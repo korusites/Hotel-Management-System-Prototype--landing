@@ -28,6 +28,11 @@ async def get_guest_by_email(db: AsyncSession, email: str) -> Guest | None:
     return result.scalar_one_or_none()
 
 
+async def get_guest_by_cpf(db: AsyncSession, cpf: str) -> Guest | None:
+    result = await db.execute(select(Guest).where(Guest.cpf == cpf))
+    return result.scalar_one_or_none()
+
+
 async def create_guest(db: AsyncSession, data: GuestCreate) -> Guest:
     guest = Guest(**data.model_dump())
     db.add(guest)

@@ -13,25 +13,74 @@ ACTIVE_STATUSES = (ReservationStatus.confirmada, ReservationStatus.pendente)
 WITH_RELATIONS = (selectinload(Reservation.guest), selectinload(Reservation.room))
 
 
+async def _auto_finish_past(db: AsyncSession, reservations: list[Reservation]) -> None:
+    """Reservas cujo check-out já passou e ainda estão ativas viram 'checkout' (encerrada)."""
+    today = date.today()
+    changed = False
+    for reservation in reservations:
+        if reservation.status in ACTIVE_STATUSES and reservation.checkout <= today:
+            reservation.status = ReservationStatus.checkout
+            changed = True
+    if changed:
+        await db.commit()
+
+
 async def list_reservations(
     db: AsyncSession, status: ReservationStatus | None = None, limit: int = 200
+) -> list[Reservation]:
+    query = select(Reservation).options(*WITH_RELATIONS).order_by(Reservation.checkin.desc())
+    result = await db.execute(query)
+    all_reservations = list(result.scalars().all())
+    await _auto_finish_past(db, all_reservations)
+
+    filtered = all_reservations if status is None else [r for r in all_reservations if r.status == status]
+    return filtered[:limit]
+
+
+async def list_reservations_between(
+    db: AsyncSession, start: date, end: date
 ) -> list[Reservation]:
     query = (
         select(Reservation)
         .options(*WITH_RELATIONS)
+        .where(Reservation.checkin >= start, Reservation.checkin <= end)
         .order_by(Reservation.checkin.desc())
-        .limit(limit)
     )
-    if status is not None:
-        query = query.where(Reservation.status == status)
     result = await db.execute(query)
-    return list(result.scalars().all())
+    reservations = list(result.scalars().all())
+    await _auto_finish_past(db, reservations)
+    return reservations
 
 
 async def get_reservation(db: AsyncSession, reservation_id: int) -> Reservation | None:
     query = select(Reservation).options(*WITH_RELATIONS).where(Reservation.id == reservation_id)
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    reservation = result.scalar_one_or_none()
+    if reservation is not None:
+        await _auto_finish_past(db, [reservation])
+    return reservation
+
+
+async def get_reservation_by_code(db: AsyncSession, code: str) -> Reservation | None:
+    query = select(Reservation).options(*WITH_RELATIONS).where(Reservation.code == code)
+    result = await db.execute(query)
+    reservation = result.scalar_one_or_none()
+    if reservation is not None:
+        await _auto_finish_past(db, [reservation])
+    return reservation
+
+
+async def list_reservations_for_guest(db: AsyncSession, guest_id: int) -> list[Reservation]:
+    query = (
+        select(Reservation)
+        .options(*WITH_RELATIONS)
+        .where(Reservation.guest_id == guest_id)
+        .order_by(Reservation.checkin.desc())
+    )
+    result = await db.execute(query)
+    reservations = list(result.scalars().all())
+    await _auto_finish_past(db, reservations)
+    return reservations
 
 
 async def _has_overlap(
@@ -106,6 +155,13 @@ async def update_reservation(
     db: AsyncSession, reservation: Reservation, data: ReservationUpdate
 ) -> Reservation:
     changes = data.model_dump(exclude_unset=True)
+
+    if "status" in changes:
+        if reservation.status == ReservationStatus.cancelada:
+            raise ValueError("Reserva já está cancelada")
+        if reservation.status == ReservationStatus.checkout:
+            raise ValueError("Reserva já concluída")
+
     new_checkin = changes.get("checkin", reservation.checkin)
     new_checkout = changes.get("checkout", reservation.checkout)
 

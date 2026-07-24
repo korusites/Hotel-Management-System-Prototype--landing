@@ -15,7 +15,7 @@ export const resStatusCfg: Record<ReservationStatus, { label: string; color: str
   confirmada: { label: "Confirmada", color: "#3d8c6e", bg: "#e8f5ee" },
   pendente: { label: "Pendente", color: "#e67e22", bg: "#fef3e2" },
   cancelada: { label: "Cancelada", color: "#B83232", bg: "#fdecea" },
-  checkout: { label: "Checkout", color: "#6B6655", bg: "#f0ede7" },
+  checkout: { label: "Encerrada", color: "#6B6655", bg: "#f0ede7" },
 };
 
 export function RoomBadge({ status }: { status: RoomStatus }) {

@@ -8,6 +8,7 @@ from app.models.staff import StaffRole, StaffStatus
 class StaffBase(BaseModel):
     name: str
     email: EmailStr
+    cpf: str
     phone: str | None = None
     role: StaffRole
     department: str | None = None
@@ -21,6 +22,7 @@ class StaffCreate(StaffBase):
 class StaffUpdate(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
+    cpf: str | None = None
     phone: str | None = None
     role: StaffRole | None = None
     department: str | None = None

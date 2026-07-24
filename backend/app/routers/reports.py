@@ -1,7 +1,8 @@
 import csv
 import io
+from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,11 +75,20 @@ async def guests_report(
     return _csv_response(rows, "relatorio-hospedes.csv")
 
 
+def _validate_period(start: date, end: date) -> None:
+    if start > end:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A data inicial deve ser anterior ou igual à data final")
+
+
 @router.get("/reservations")
 async def reservations_report(
-    db: AsyncSession = Depends(get_db), _staff=Depends(get_current_staff)
+    start: date,
+    end: date,
+    db: AsyncSession = Depends(get_db),
+    _staff=Depends(get_current_staff),
 ) -> StreamingResponse:
-    reservations = await reservation_crud.list_reservations(db)
+    _validate_period(start, end)
+    reservations = await reservation_crud.list_reservations_between(db, start, end)
     rows = [
         {
             "codigo": r.code,
@@ -98,19 +108,27 @@ async def reservations_report(
 
 @router.get("/financial")
 async def financial_report(
-    db: AsyncSession = Depends(get_db), _staff=Depends(get_current_staff)
+    start: date,
+    end: date,
+    db: AsyncSession = Depends(get_db),
+    _staff=Depends(get_current_staff),
 ) -> StreamingResponse:
-    revenue = await dashboard_crud.get_monthly_revenue(db, months=12)
+    _validate_period(start, end)
+    revenue = await dashboard_crud.get_revenue_for_period(db, start, end)
     rows = [{"mes": point["month"], "receita": point["receita"]} for point in revenue]
     return _csv_response(rows, "relatorio-financeiro.csv")
 
 
 @router.get("/services")
 async def services_report(
-    db: AsyncSession = Depends(get_db), _staff=Depends(get_current_staff)
+    start: date,
+    end: date,
+    db: AsyncSession = Depends(get_db),
+    _staff=Depends(get_current_staff),
 ) -> StreamingResponse:
+    _validate_period(start, end)
     services = await service_crud.list_services(db)
-    usage = await service_crud.usage_counts(db)
+    usage = await service_crud.usage_counts_between(db, start, end)
     rows = [
         {
             "nome": s.name,

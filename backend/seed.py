@@ -90,19 +90,19 @@ RESERVATIONS = [
 ]
 
 STAFF = [
-    dict(name="Ana Paula Souza", email="ana.souza@hotel.com", phone="(11) 3344-5566",
+    dict(name="Ana Paula Souza", email="ana.souza@hotel.com", cpf="111.111.111-11", phone="(11) 3344-5566",
          role=StaffRole.administrador, department="Administração", status=StaffStatus.ativo,
          since=date(2019, 3, 1)),
-    dict(name="Carlos Eduardo Lima", email="carlos.lima@hotel.com", phone="(11) 3344-5567",
+    dict(name="Carlos Eduardo Lima", email="carlos.lima@hotel.com", cpf="222.222.222-22", phone="(11) 3344-5567",
          role=StaffRole.recepcionista, department="Recepção", status=StaffStatus.ativo,
          since=date(2021, 6, 15)),
-    dict(name="Patrícia Gomes", email="patricia.gomes@hotel.com", phone="(11) 3344-5568",
+    dict(name="Patrícia Gomes", email="patricia.gomes@hotel.com", cpf="333.333.333-33", phone="(11) 3344-5568",
          role=StaffRole.governanta, department="Housekeeping", status=StaffStatus.ativo,
          since=date(2020, 1, 10)),
-    dict(name="Rodrigo Mendes", email="rodrigo.m@hotel.com", phone="(11) 3344-5569",
+    dict(name="Rodrigo Mendes", email="rodrigo.m@hotel.com", cpf="444.444.444-44", phone="(11) 3344-5569",
          role=StaffRole.gerente, department="Alimentos & Bebidas", status=StaffStatus.ativo,
          since=date(2022, 8, 20)),
-    dict(name="Luciana Ferreira", email="luciana.f@hotel.com", phone="(11) 3344-5570",
+    dict(name="Luciana Ferreira", email="luciana.f@hotel.com", cpf="555.555.555-55", phone="(11) 3344-5570",
          role=StaffRole.recepcionista, department="Recepção", status=StaffStatus.inativo,
          since=date(2020, 5, 1)),
 ]

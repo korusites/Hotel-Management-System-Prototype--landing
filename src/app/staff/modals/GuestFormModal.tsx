@@ -28,6 +28,10 @@ export function GuestFormModal({
   const [showCpf, setShowCpf] = useState(false);
 
   async function submit() {
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.cpf.trim()) {
+      setError("Preencha todos os campos obrigatórios: nome, e-mail, telefone e CPF.");
+      return;
+    }
     setSaving(true);
     setError(null);
     const payload = { ...form, city: form.city || null, rating: Number(form.rating) };
@@ -92,7 +96,7 @@ export function GuestFormModal({
         {error && <p className="text-xs text-red-500">{error}</p>}
         <DialogFooter>
           <OutlineBtn onClick={onClose}>Cancelar</OutlineBtn>
-          <GoldBtn onClick={submit} disabled={saving || !form.name || !form.email}>{saving ? "Salvando..." : "Salvar"}</GoldBtn>
+          <GoldBtn onClick={submit} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</GoldBtn>
         </DialogFooter>
       </DialogContent>
     </Dialog>

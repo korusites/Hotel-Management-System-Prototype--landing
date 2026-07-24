@@ -31,6 +31,10 @@ export function RoomFormModal({
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
+    if (!form.number.trim()) {
+      setError("O número do quarto é obrigatório.");
+      return;
+    }
     setSaving(true);
     setError(null);
     const payload = {
@@ -48,7 +52,7 @@ export function RoomFormModal({
       else await api.rooms.create(payload);
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível salvar o quarto.");
+      setError(err instanceof ApiError ? err.message : "Número de quarto já existe.");
     } finally {
       setSaving(false);
     }
@@ -101,7 +105,7 @@ export function RoomFormModal({
         {error && <p className="text-xs text-red-500">{error}</p>}
         <DialogFooter>
           <OutlineBtn onClick={onClose}>Cancelar</OutlineBtn>
-          <GoldBtn onClick={submit} disabled={saving || !form.number}>{saving ? "Salvando..." : "Salvar"}</GoldBtn>
+          <GoldBtn onClick={submit} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</GoldBtn>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.reservation import Reservation, ReservationStatus
 from app.models.reservation_service import ReservationService
 from app.models.service import Service
 from app.schemas.reservation_service import ReservationServiceCreate
@@ -21,8 +22,11 @@ async def list_for_reservation(db: AsyncSession, reservation_id: int) -> list[Re
 
 
 async def add_consumption(
-    db: AsyncSession, reservation_id: int, data: ReservationServiceCreate
+    db: AsyncSession, reservation: Reservation, data: ReservationServiceCreate
 ) -> ReservationService:
+    if reservation.status in (ReservationStatus.cancelada, ReservationStatus.checkout):
+        raise ValueError("Não é possível lançar serviços em uma hospedagem já finalizada")
+
     service = await db.get(Service, data.service_id)
     if service is None:
         raise ValueError("Serviço não encontrado")
@@ -30,7 +34,7 @@ async def add_consumption(
         raise ValueError("Serviço indisponível")
 
     consumption = ReservationService(
-        reservation_id=reservation_id,
+        reservation_id=reservation.id,
         service_id=service.id,
         quantity=data.quantity,
         unit_price=service.price,

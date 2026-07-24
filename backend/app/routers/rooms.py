@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.crud import room as room_crud
 from app.deps import get_current_staff, require_role
 from app.models.room import RoomStatus, RoomType
-from app.schemas.room import RoomCreate, RoomRead, RoomUpdate
+from app.schemas.room import RoomCatalogEntry, RoomCreate, RoomRead, RoomUpdate
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -26,6 +26,35 @@ async def search_availability(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "checkout deve ser depois do checkin")
     rooms = await room_crud.search_availability(db, checkin, checkout, pax, type)
     return rooms
+
+
+@router.get("/catalog", response_model=list[RoomCatalogEntry])
+async def room_catalog(
+    checkin: date,
+    checkout: date,
+    pax: int = 1,
+    type: RoomType | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> list[RoomCatalogEntry]:
+    if checkout <= checkin:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "checkout deve ser depois do checkin")
+    entries = await room_crud.catalog(db, checkin, checkout, pax, type)
+    return [
+        RoomCatalogEntry(
+            id=room.id,
+            number=room.number,
+            floor=room.floor,
+            type=room.type,
+            status=room.status,
+            capacity=room.capacity,
+            price=float(room.price),
+            amenities=room.amenities,
+            img=room.img,
+            available=available,
+            available_from=available_from,
+        )
+        for room, available, available_from in entries
+    ]
 
 
 @router.get("", response_model=list[RoomRead])
@@ -51,6 +80,9 @@ async def get_room(
 async def create_room(
     payload: RoomCreate, db: AsyncSession = Depends(get_db), _staff=Depends(staff_or_manager)
 ) -> RoomRead:
+    existing = await room_crud.get_room_by_number(db, payload.number)
+    if existing is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um quarto com este número")
     return await room_crud.create_room(db, payload)
 
 
@@ -64,6 +96,10 @@ async def update_room(
     room = await room_crud.get_room(db, room_id)
     if room is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Quarto não encontrado")
+    if payload.number is not None and payload.number != room.number:
+        existing = await room_crud.get_room_by_number(db, payload.number)
+        if existing is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um quarto com este número")
     return await room_crud.update_room(db, room, payload)
 
 

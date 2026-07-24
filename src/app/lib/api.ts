@@ -7,11 +7,14 @@ import type {
   GuestInput,
   Invoice,
   OccupancyPoint,
+  Payment,
+  PaymentMethod,
   ReportType,
   Reservation,
   ReservationStatus,
   RevenuePoint,
   Room,
+  RoomCatalogEntry,
   RoomInput,
   RoomStatus,
   RoomType,
@@ -131,6 +134,8 @@ export const api = {
     list: (status?: RoomStatus) => request<Room[]>(`/rooms${qs({ status_filter: status })}`),
     availability: (checkin: string, checkout: string, pax: number, type?: RoomType) =>
       request<Room[]>(`/rooms/availability${qs({ checkin, checkout, pax, type })}`),
+    catalog: (checkin: string, checkout: string, pax: number, type?: RoomType) =>
+      request<RoomCatalogEntry[]>(`/rooms/catalog${qs({ checkin, checkout, pax, type })}`),
     create: (data: RoomInput) => request<Room>("/rooms", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: Partial<RoomInput>) =>
       request<Room>(`/rooms/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
@@ -143,6 +148,7 @@ export const api = {
     update: (id: number, data: Partial<GuestInput>) =>
       request<Guest>(`/guests/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     remove: (id: number) => request<void>(`/guests/${id}`, { method: "DELETE" }),
+    reservations: (id: number) => request<Reservation[]>(`/guests/${id}/reservations`),
   },
 
   reservations: {
@@ -187,6 +193,9 @@ export const api = {
 
   finance: {
     invoices: () => request<Invoice[]>("/finance/invoices"),
+    payments: () => request<Payment[]>("/finance/payments"),
+    registerPayment: (data: { reservation_code: string; amount: number; payment_method: PaymentMethod }) =>
+      request<Payment>("/finance/payments", { method: "POST", body: JSON.stringify(data) }),
   },
 
   system: {
@@ -194,9 +203,9 @@ export const api = {
   },
 
   reports: {
-    download: (type: ReportType) => {
+    download: (type: ReportType, period?: { start: string; end: string }) => {
       const { path, filename } = REPORT_PATHS[type];
-      return downloadFile(path, filename);
+      return downloadFile(`${path}${qs({ start: period?.start, end: period?.end })}`, filename);
     },
   },
 

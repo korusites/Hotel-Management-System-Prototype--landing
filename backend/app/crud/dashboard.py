@@ -71,6 +71,26 @@ async def get_monthly_revenue(db: AsyncSession, months: int = 12) -> list[dict]:
     return points
 
 
+async def get_revenue_for_period(db: AsyncSession, start: date, end: date) -> list[dict]:
+    points = []
+    cursor = start.replace(day=1)
+    last_month = end.replace(day=1)
+    while cursor <= last_month:
+        month_end = (cursor + timedelta(days=32)).replace(day=1)
+        revenue = (
+            await db.execute(
+                select(func.coalesce(func.sum(Reservation.total), 0)).where(
+                    Reservation.checkin >= max(cursor, start),
+                    Reservation.checkin < min(month_end, end + timedelta(days=1)),
+                    Reservation.status != ReservationStatus.cancelada,
+                )
+            )
+        ).scalar_one()
+        points.append({"month": cursor.strftime("%b/%Y"), "receita": float(revenue)})
+        cursor = month_end
+    return points
+
+
 async def get_weekly_occupancy(db: AsyncSession) -> list[dict]:
     total_rooms = (await db.execute(select(func.count(Room.id)))).scalar_one()
     today = date.today()

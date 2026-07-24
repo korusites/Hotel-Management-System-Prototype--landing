@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 DB_PATH = os.environ.get("FINANCE_DB_PATH", "/data/finance.db")
 
@@ -23,6 +23,18 @@ def init_db() -> None:
                 guest_name TEXT NOT NULL,
                 amount REAL NOT NULL,
                 kind TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reservation_code TEXT NOT NULL,
+                amount REAL NOT NULL,
+                payment_method TEXT NOT NULL,
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
@@ -51,6 +63,21 @@ class InvoiceCreate(BaseModel):
 
 
 class InvoiceRead(InvoiceCreate):
+    id: int
+    status: str
+    created_at: str
+
+
+PaymentMethod = Literal["dinheiro", "cartao_credito", "cartao_debito", "pix", "transferencia"]
+
+
+class PaymentCreate(BaseModel):
+    reservation_code: str
+    amount: float = Field(gt=0, description="Valor do pagamento, deve ser positivo")
+    payment_method: PaymentMethod
+
+
+class PaymentRead(PaymentCreate):
     id: int
     status: str
     created_at: str
@@ -89,3 +116,24 @@ async def get_invoice(invoice_id: int) -> InvoiceRead:
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fatura não encontrada")
     return InvoiceRead(**dict(row))
+
+
+@app.post("/payments", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
+async def create_payment(payload: PaymentCreate) -> PaymentRead:
+    created_at = datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "INSERT INTO payments (reservation_code, amount, payment_method, status, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (payload.reservation_code, payload.amount, payload.payment_method, "confirmado", created_at),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM payments WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    return PaymentRead(**dict(row))
+
+
+@app.get("/payments", response_model=list[PaymentRead])
+async def list_payments() -> list[PaymentRead]:
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM payments ORDER BY id DESC").fetchall()
+    return [PaymentRead(**dict(row)) for row in rows]

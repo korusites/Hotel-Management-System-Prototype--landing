@@ -3,9 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.crud import guest as guest_crud
+from app.crud import reservation as reservation_crud
 from app.deps import get_current_staff, require_role
 from app.models.guest import Guest
 from app.schemas.guest import GuestCreate, GuestReadWithStats, GuestUpdate
+from app.schemas.reservation import ReservationRead
 
 router = APIRouter(prefix="/guests", tags=["guests"])
 
@@ -48,6 +50,16 @@ async def get_guest(
     return await _with_stats(db, guest)
 
 
+@router.get("/{guest_id}/reservations", response_model=list[ReservationRead])
+async def get_guest_reservations(
+    guest_id: int, db: AsyncSession = Depends(get_db), _staff=Depends(get_current_staff)
+) -> list[ReservationRead]:
+    guest = await guest_crud.get_guest(db, guest_id)
+    if guest is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hóspede não encontrado")
+    return await reservation_crud.list_reservations_for_guest(db, guest_id)
+
+
 @router.post("", response_model=GuestReadWithStats, status_code=status.HTTP_201_CREATED)
 async def create_guest(
     payload: GuestCreate, db: AsyncSession = Depends(get_db), _staff=Depends(get_current_staff)
@@ -55,6 +67,9 @@ async def create_guest(
     existing = await guest_crud.get_guest_by_email(db, payload.email)
     if existing is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um hóspede com este email")
+    existing_cpf = await guest_crud.get_guest_by_cpf(db, payload.cpf)
+    if existing_cpf is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um hóspede com este CPF")
     guest = await guest_crud.create_guest(db, payload)
     return await _with_stats(db, guest)
 
@@ -69,6 +84,10 @@ async def update_guest(
     guest = await guest_crud.get_guest(db, guest_id)
     if guest is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hóspede não encontrado")
+    if payload.cpf is not None and payload.cpf != guest.cpf:
+        existing_cpf = await guest_crud.get_guest_by_cpf(db, payload.cpf)
+        if existing_cpf is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um hóspede com este CPF")
     guest = await guest_crud.update_guest(db, guest, payload)
     return await _with_stats(db, guest)
 

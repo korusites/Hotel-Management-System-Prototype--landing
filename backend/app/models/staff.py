@@ -25,6 +25,7 @@ class StaffMember(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    cpf: Mapped[str] = mapped_column(String(20), unique=True)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     role: Mapped[StaffRole] = mapped_column(SAEnum(StaffRole, name="staff_role"))
     department: Mapped[str | None] = mapped_column(String(200), nullable=True)

@@ -38,6 +38,9 @@ async def create_staff(
     existing = await staff_crud.get_staff_by_email(db, payload.email)
     if existing is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um funcionário com este email")
+    existing_cpf = await staff_crud.get_staff_by_cpf(db, payload.cpf)
+    if existing_cpf is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um funcionário com este CPF")
     return await staff_crud.create_staff(db, payload)
 
 
@@ -51,6 +54,10 @@ async def update_staff(
     staff = await staff_crud.get_staff(db, staff_id)
     if staff is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Funcionário não encontrado")
+    if payload.cpf is not None and payload.cpf != staff.cpf:
+        existing_cpf = await staff_crud.get_staff_by_cpf(db, payload.cpf)
+        if existing_cpf is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Já existe um funcionário com este CPF")
     return await staff_crud.update_staff(db, staff, payload)
 
 

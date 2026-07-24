@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { GoldBtn, OutlineBtn, inputClass, labelClass } from "../../components/shared";
@@ -24,8 +25,9 @@ export function StaffFormModal({
   const [form, setForm] = useState({
     name: initial?.name ?? "",
     email: initial?.email ?? "",
+    cpf: initial?.cpf ?? "",
     phone: initial?.phone ?? "",
-    role: initial?.role ?? "recepcionista",
+    role: initial?.role ?? ("" as StaffRole | ""),
     department: initial?.department ?? "",
     since: initial?.since ?? new Date().toISOString().slice(0, 10),
     status: initial?.status ?? "ativo",
@@ -33,8 +35,17 @@ export function StaffFormModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCpf, setShowCpf] = useState(false);
 
   async function submit() {
+    if (!form.name.trim() || !form.email.trim() || !form.cpf.trim() || !form.role) {
+      setError("Preencha todos os campos obrigatórios: nome, e-mail, CPF e papel.");
+      return;
+    }
+    if (!initial && !form.password.trim()) {
+      setError("Defina uma senha para o novo funcionário.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -42,6 +53,7 @@ export function StaffFormModal({
         const payload: Record<string, unknown> = {
           name: form.name,
           email: form.email,
+          cpf: form.cpf,
           phone: form.phone || null,
           role: form.role,
           department: form.department || null,
@@ -53,6 +65,7 @@ export function StaffFormModal({
         await api.staff.create({
           name: form.name,
           email: form.email,
+          cpf: form.cpf,
           phone: form.phone || null,
           role: form.role as StaffRole,
           department: form.department || null,
@@ -96,12 +109,32 @@ export function StaffFormModal({
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
           </div>
           <div>
+            <label className={labelClass}>CPF *</label>
+            <div className="relative">
+              <input
+                type={showCpf ? "text" : "password"}
+                value={form.cpf}
+                onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+                className={`${inputClass} pr-9`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCpf((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showCpf ? "Ocultar CPF" : "Mostrar CPF"}
+              >
+                {showCpf ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+          <div>
             <label className={labelClass}>Telefone</label>
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Papel</label>
+            <label className={labelClass}>Papel *</label>
             <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as StaffRole })} className={inputClass}>
+              <option value="">Selecione...</option>
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
@@ -130,7 +163,7 @@ export function StaffFormModal({
         {error && <p className="text-xs text-red-500">{error}</p>}
         <DialogFooter>
           <OutlineBtn onClick={onClose}>Cancelar</OutlineBtn>
-          <GoldBtn onClick={submit} disabled={saving || !form.name || !form.email || (!initial && !form.password)}>
+          <GoldBtn onClick={submit} disabled={saving}>
             {saving ? "Salvando..." : "Salvar"}
           </GoldBtn>
         </DialogFooter>
