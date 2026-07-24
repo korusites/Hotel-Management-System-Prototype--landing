@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: hotel-api
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # connection string do Neon, formato postgresql+asyncpg://...
+      - key: CORS_ORIGINS
+        sync: false # URL do front na Vercel, ex.: https://seu-projeto.vercel.app
+      - key: FINANCE_SERVICE_URL
+        sync: false # URL pública do serviço hotel-finance (preencher depois de ambos criados)
+      - key: JWT_SECRET
+        generateValue: true
+
+  - type: web
+    name: hotel-finance
+    env: docker
+    plan: free
+    dockerfilePath: ./finance-service/Dockerfile
+    dockerContext: ./finance-service
+    healthCheckPath: /health

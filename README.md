@@ -26,4 +26,26 @@
   Painel staff: `ana.souza@hotel.com` / `demo1234` (administrador). Outras contas de exemplo em `backend/seed.py`.
 
   Portal do hóspede (`Minhas Reservas` / fluxo de reserva) não exige conta — basta o e-mail usado na reserva, como na maioria dos sites de hotel reais.
+
+  ## Hospedagem gratuita (Vercel + Render + Neon + GitHub Actions)
+
+  A mesma arquitetura de 4 peças roda hospedada, sem custo:
+
+  | Peça | Onde |
+  |---|---|
+  | Front-end (`src/`) | [Vercel](https://vercel.com) — detecta o projeto Vite automaticamente |
+  | API principal (`backend/`) | [Render](https://render.com) — free Web Service via Docker (`render.yaml`) |
+  | Sistema Financeiro (`finance-service/`) | [Render](https://render.com) — outro free Web Service via Docker |
+  | Banco de dados | [Neon](https://neon.tech) — Postgres serverless gratuito, substitui o Postgres do `docker-compose` |
+  | Backup automático | `.github/workflows/backup.yml` — `pg_dump` agendado contra o Neon, publicado como artifact do GitHub Actions (equivalente gratuito ao container de backup local, que exige um Postgres próprio via Docker) |
+
+  **Passo a passo:**
+  1. Criar um projeto no [Neon](https://neon.tech) e copiar a connection string.
+  2. Rodar as migrations e o seed contra o Neon (`alembic upgrade head` e `python seed.py` com `DATABASE_URL` apontando pra lá).
+  3. No [Render](https://render.com): **New Blueprint** → conectar este repositório → ele lê o `render.yaml` e cria os serviços `hotel-api` e `hotel-finance` → preencher no painel: `DATABASE_URL` (Neon), `FINANCE_SERVICE_URL` (URL pública do `hotel-finance`, depois de criado) e `CORS_ORIGINS` (preenchido no passo 4).
+  4. Na [Vercel](https://vercel.com): importar o repositório → definir a env var `VITE_API_BASE_URL` com a URL pública do `hotel-api` → deploy.
+  5. Voltar no Render e preencher `CORS_ORIGINS` do `hotel-api` com a URL da Vercel → redeploy.
+  6. No GitHub do repositório: **Settings → Secrets and variables → Actions** → adicionar o secret `DATABASE_URL` com a connection string "crua" do Neon (formato `postgresql://...`, sem o `+asyncpg`) para o workflow de backup funcionar.
+
+  **Limitação conhecida do free tier**: o `hotel-finance` no Render não tem disco persistente — o SQLite de faturas/pagamentos reseta a cada novo deploy (não a cada período de inatividade). Localmente, via `docker-compose`, ele persiste normalmente num volume nomeado.
   

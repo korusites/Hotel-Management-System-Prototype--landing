@@ -19,6 +19,17 @@ docker compose exec api alembic revision --autogenerate -m "descrição da mudan
 docker compose exec api alembic upgrade head
 ```
 
+## Variáveis de ambiente (`app/core/config.py`)
+
+| Variável | Padrão (dev local) | Em produção (Render) |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://hotel:hotel@db:5432/hotel` | connection string do Neon (mesmo formato, com `+asyncpg`) |
+| `JWT_SECRET` | valor de exemplo, não seguro | gerado automaticamente pelo `render.yaml` |
+| `FINANCE_SERVICE_URL` | `http://finance:8001` (nome do serviço no docker-compose) | URL pública do serviço `hotel-finance` no Render |
+| `CORS_ORIGINS` | `*` (qualquer origem, ok para dev local) | URL do front na Vercel (ex.: `https://seu-projeto.vercel.app`) |
+
+Detalhes completos de como hospedar tudo isso de graça (Vercel + Render + Neon + GitHub Actions) estão no `README.md` da raiz do projeto.
+
 ## Estrutura
 
 - `app/models/` — SQLAlchemy ORM (Room, Guest, Reservation, ReservationService, StaffMember, Service)
@@ -51,7 +62,7 @@ docker compose exec api alembic upgrade head
 | RNF03 Escalabilidade | stack assíncrona (FastAPI + SQLAlchemy async), API sem estado (JWT) |
 | RNF04 Desempenho | limite de página (`limit`, máx. 500) em `/guests`, `/reservations`, `/staff` |
 | RNF07 Conformidade com LGPD | CPF mascarado por padrão no formulário de edição do hóspede (revelar sob demanda) |
-| RNF09 Backup e Recuperação | serviço `prodrigestivill/postgres-backup-local` no `docker-compose.yml` (backup automático a cada hora); `GET /system/backups` expõe o status real, consumido em `ConfigView.tsx` |
+| RNF09 Backup e Recuperação | serviço `prodrigestivill/postgres-backup-local` no `docker-compose.yml` (backup automático a cada hora); `GET /system/backups` expõe o status real, consumido em `ConfigView.tsx`. Na versão hospedada, `.github/workflows/backup.yml` cumpre o mesmo papel (backup diário agendado contra o Neon) |
 
 RNF05/06/08/10 não exigiram código novo — já cobertos pela arquitetura (stack web padrão, código modular, validação via Pydantic, UI responsiva).
 

@@ -1,0 +1,38 @@
+name: Backup do banco (Sistema de Backup)
+
+# Realiza, para o ambiente hospedado, o mesmo papel do serviço
+# `prodrigestivill/postgres-backup-local` do docker-compose local: um
+# backup automático e recorrente, rodando de forma independente da
+# aplicação. Requer o secret DATABASE_URL (a connection string "crua"
+# do Postgres, formato postgresql://usuario:senha@host/banco — não a
+# variante com +asyncpg usada pela API) configurado em
+# Settings -> Secrets and variables -> Actions.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # diariamente às 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente do PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Gerar dump do banco
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Secret DATABASE_URL não configurado neste repositório — pulando backup." >&2
+            exit 1
+          fi
+          pg_dump "$DATABASE_URL" --format=plain --no-owner --no-privileges > "backup-$(date +%Y-%m-%d-%H%M).sql"
+
+      - name: Publicar dump como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-postgres-${{ github.run_id }}
+          path: backup-*.sql
+          retention-days: 30
