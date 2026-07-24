@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """
 Fixtures compartilhadas pelos testes de caixa cinza.
 
@@ -51,3 +52,20 @@ def auth_token(api_base: str) -> str:
 @pytest.fixture
 def auth_headers(auth_token: str) -> dict:
     return {"Authorization": f"Bearer {auth_token}"}
+=======
+# backend/conftest.py
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app # Importa a sua aplicação principal
+from app.core.database import get_db # Importa a dependência do banco
+
+# 1. Cria um cliente de teste para simular as rotas
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+# 2. (Opcional, mas recomendado) Mock do Banco de Dados
+# Aqui você pode substituir a sessão real do banco por um SQLite em memória 
+# para que os testes não afetem seus dados reais de desenvolvimento.
+>>>>>>> Stashed changes
